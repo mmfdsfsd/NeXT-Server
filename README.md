@@ -22,7 +22,7 @@ Debian9源<br>
 Intel CPU<br>
 <code>apt install ca-certificates wget curl unzip tar supervisor -y &&</code><br>
 <code>mkdir /root/next-server-linux-amd64 && cd $_ &&</code><br>
-<code>wget -q -N --no-check-certificate  https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.2/next-server-linux-amd64.zip &&</code><br>
+<code>wget -q -N --no-check-certificate  https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.9/next-server-linux-amd64.zip &&</code><br>
 <code>unzip next-server-linux-amd64.zip &&</code><br>
 <code>rm next-server-linux-amd64.zip &&</code><br>
 <code>chmod +x next-server</code><br>
@@ -30,7 +30,7 @@ Intel CPU<br>
 AMD CPU <br>
 <code>apt install ca-certificates wget curl unzip tar supervisor -y &&</code><br>
 <code>mkdir /root/next-server-linux-amd64 && cd $_ && </code><br>
-<code>wget -q -N --no-check-certificate -c https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.2/next-server-linux-amd64v3.zip -O next-server-linux-amd64.zip &&</code><br>
+<code>wget -q -N --no-check-certificate -c https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.9/next-server-linux-amd64v3.zip -O next-server-linux-amd64.zip &&</code><br>
 <code>unzip next-server-linux-amd64.zip &&</code><br>
 <code>rm next-server-linux-amd64.zip  &&</code><br>
 <code>chmod +x next-server</code><br>
