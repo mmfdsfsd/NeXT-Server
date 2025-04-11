@@ -22,6 +22,7 @@ AMD CPU
 
 [program:next-server]
 command = /root/next-server-linux-amd64/next-server -c /root/next-server-linux-amd64/config.yml
+startsecs = 0
 user = root
 autostart = true
 autorestart = true
