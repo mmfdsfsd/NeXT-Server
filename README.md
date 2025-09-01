@@ -7,7 +7,7 @@ Next generation proxy server.
 Intel CPU
 <code>apt install ca-certificates wget curl unzip tar supervisor git -y &&</code>
 <code>mkdir /root/next-server-linux-amd64 && cd $_ &&</code>
-<code>wget -q -N --no-check-certificate  https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.9/next-server-linux-amd64.zip &&</code>
+<code>wget -q -N --no-check-certificate  https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.17/next-server-linux-amd64.zip &&</code>
 <code>unzip next-server-linux-amd64.zip &&</code>
 <code>rm next-server-linux-amd64.zip &&</code>
 <code>chmod +x next-server</code>
@@ -15,7 +15,7 @@ Intel CPU
 AMD CPU
 <code>apt install ca-certificates wget curl unzip tar supervisor git -y &&</code>
 <code>mkdir /root/next-server-linux-amd64 && cd $_ && </code>
-<code>wget -q -N --no-check-certificate -c https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.9/next-server-linux-amd64v3.zip -O next-server-linux-amd64.zip &&</code>
+<code>wget -q -N --no-check-certificate -c https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.17/next-server-linux-amd64v3.zip -O next-server-linux-amd64.zip &&</code>
 <code>unzip next-server-linux-amd64.zip &&</code>
 <code>rm next-server-linux-amd64.zip  &&</code>
 <code>chmod +x next-server</code>
