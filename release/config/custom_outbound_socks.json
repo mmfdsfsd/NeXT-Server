@@ -1,6 +1,11 @@
 [
   {
-    "tag": "SOCKS5_out",
+    "tag": "IPv4_out",
+    "protocol": "freedom",
+    "settings": {}
+  },
+  {
+    "tag": "Socks5_out",
     "protocol": "socks",
     "settings": {
       "servers": [
