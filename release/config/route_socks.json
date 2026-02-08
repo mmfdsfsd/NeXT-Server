@@ -17,8 +17,38 @@
     },
     {
       "type": "field",
-      "outboundTag": "SOCKS5_out",
-      "network": "udp,tcp"
+      "outboundTag": "IPv4_out",
+      "domain": [
+        "domain:cp.cloudflare.com",
+        "domain:connectivitycheck.gstatic.com",
+        "domain:www.gstatic.com",
+        "domain:captive.apple.com",
+		    "domain:detectportal.firefox.com"
+      ]
+    },
+	{
+      "type": "field",
+      "outboundTag": "IPv4_out",
+      "ip": [
+        "1.1.1.1"
+      ]
+    },
+    {
+      "type": "field",
+      "outboundTag": "IPv4_out",
+      "domain": [
+        "full:hotspot-detect.html"
+      ]
+    },
+    {
+      "type": "field",
+      "outboundTag": "Socks5",
+      "network": "tcp"
+    },
+    {
+      "type": "field",
+      "outboundTag": "IPv4_out",
+      "network": "udp"
     }
   ]
 }
