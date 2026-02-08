@@ -42,7 +42,7 @@
     },
     {
       "type": "field",
-      "outboundTag": "Socks5",
+      "outboundTag": "Socks5_out",
       "network": "tcp"
     },
     {
