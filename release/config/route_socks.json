@@ -40,9 +40,14 @@
         "full:hotspot-detect.html"
       ]
     },
+	{
+      "type": "field",
+      "outboundTag": "Ai_Socks5_out",
+      "domain": ["geosite:category-ai-!cn"]
+    },
     {
       "type": "field",
-      "outboundTag": "Socks5_out",
+      "outboundTag": "Warp_Socks5_out",
       "network": "tcp"
     },
     {
