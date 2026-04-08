@@ -65,7 +65,11 @@ key_file=$(yq '.Nodes[0].ControllerConfig.CertConfig.KeyFile // ""' "$CONFIG_FIL
 
 route=$(read_input "RouteConfigPath" "$route")
 outbound=$(read_input "OutboundConfigPath" "$outbound")
-api_host=$(read_input "ApiHost" "$api_host")
+api_host=$(read_input "ApiHost(不要输入 https://)" "$api_host")
+# 自动补全 https://
+if [[ ! "$api_host" =~ ^https?:// ]]; then
+    api_host="https://$api_host"
+fi
 api_key=$(read_input "ApiKey" "$api_key")
 node_id=$(read_input "NodeID" "$node_id")
 node_type=$(read_input "NodeType(vmess/trojan/shadowsocks)" "$node_type")
