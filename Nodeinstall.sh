@@ -19,7 +19,6 @@ fi
 mkdir -p /root/next-server-linux-amd64
 cd /root/next-server-linux-amd64 || exit 1
 
-# CPU 检测（/proc/cpuinfo）
 CPU_VENDOR=$(awk -F: '/vendor_id/ {gsub(/ /,"",$2); print tolower($2); exit}' /proc/cpuinfo)
 echo "检测到 CPU 厂商: $CPU_VENDOR"
 
@@ -28,7 +27,7 @@ if [[ "$CPU_VENDOR" == *"intel"* ]]; then
 elif [[ "$CPU_VENDOR" == *"amd"* ]]; then
     ZIP_URL="https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.19/next-server-linux-amd64v3.zip"
 else
-    echo "无法识别 CPU，默认 Intel 版本"
+    echo "无法识别 CPU，默认 Intel"
     ZIP_URL="https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.19/next-server-linux-amd64.zip"
 fi
 
@@ -36,7 +35,6 @@ wget -q -O next-server.zip "$ZIP_URL"
 unzip -o next-server.zip
 rm -f next-server.zip
 
-# 下载 geosite.dat
 wget -q -O geosite.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
 
 chmod +x next-server
@@ -44,7 +42,7 @@ chmod +x next-server
 CONFIG_FILE="/root/next-server-linux-amd64/config.yml"
 
 # =========================
-# 交互输入
+# 交互函数
 # =========================
 read_input() {
     local prompt="$1"
@@ -53,6 +51,9 @@ read_input() {
     echo "${input:-$default}"
 }
 
+# =========================
+# 读取配置
+# =========================
 route=$(yq '.RouteConfigPath // ""' "$CONFIG_FILE")
 outbound=$(yq '.OutboundConfigPath // ""' "$CONFIG_FILE")
 api_host=$(yq '.Nodes[0].ApiConfig.ApiHost // ""' "$CONFIG_FILE")
@@ -63,19 +64,24 @@ cert_mode=$(yq '.Nodes[0].ControllerConfig.CertConfig.CertMode // "none"' "$CONF
 cert_file=$(yq '.Nodes[0].ControllerConfig.CertConfig.CertFile // ""' "$CONFIG_FILE")
 key_file=$(yq '.Nodes[0].ControllerConfig.CertConfig.KeyFile // ""' "$CONFIG_FILE")
 
+# =========================
+# 用户输入
+# =========================
 route=$(read_input "RouteConfigPath" "$route")
 outbound=$(read_input "OutboundConfigPath" "$outbound")
+
 api_host=$(read_input "ApiHost(不要输入 https://)" "$api_host")
-# 自动补全 https://
+# 自动补 https
 if [[ ! "$api_host" =~ ^https?:// ]]; then
     api_host="https://$api_host"
 fi
+
 api_key=$(read_input "ApiKey" "$api_key")
 node_id=$(read_input "NodeID" "$node_id")
 node_type=$(read_input "NodeType(vmess/trojan/shadowsocks)" "$node_type")
 
 # =========================
-# TLS 自动申请
+# TLS 申请
 # =========================
 read -p "是否自动申请 TLS 证书? (y/n) [n]: " enable_tls
 enable_tls=${enable_tls:-n}
@@ -101,8 +107,24 @@ if [[ "$enable_tls" == "y" || "$enable_tls" == "Y" ]]; then
         cert_mode="file"
         cert_file="$CERT_PATH"
         key_file="$KEY_PATH"
+
+        # =========================
+        # 仅成功才设置续期
+        # =========================
+        cat <<'EOF' > /usr/local/bin/cert_renew.sh
+#!/bin/bash
+systemctl stop nginx 2>/dev/null
+systemctl stop apache2 2>/dev/null
+certbot renew --quiet
+EOF
+
+        chmod +x /usr/local/bin/cert_renew.sh
+
+        (crontab -l 2>/dev/null | grep -v cert_renew.sh; echo "0 3 1 */2 * /usr/local/bin/cert_renew.sh") | crontab -
+
+        echo "已设置证书自动续期"
     else
-        echo "证书申请失败，跳过 TLS 配置"
+        echo "证书申请失败，跳过续期"
     fi
 fi
 
@@ -147,29 +169,9 @@ systemctl enable next-server
 systemctl restart next-server
 
 # =========================
-# crontab 自动续期（每2个月，不重启服务）
-# =========================
-cat <<'EOF' > /usr/local/bin/cert_renew.sh
-#!/bin/bash
-
-systemctl stop nginx 2>/dev/null
-systemctl stop apache2 2>/dev/null
-
-certbot renew --quiet
-
-EOF
-
-chmod +x /usr/local/bin/cert_renew.sh
-
-(crontab -l 2>/dev/null | grep -v cert_renew.sh; echo "0 3 1 */2 * /usr/local/bin/cert_renew.sh") | crontab -
-
-echo "已设置每2个月自动续期证书（不重启 next-server）"
-
-# =========================
 # 完成
 # =========================
 echo "======================================"
 echo "部署完成！"
 echo "查看状态: systemctl status next-server"
-echo "重启服务: systemctl restart next-server"
 echo "======================================"
