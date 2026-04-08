@@ -136,5 +136,6 @@ EOF
 systemctl daemon-reload
 systemctl enable next-server
 systemctl start next-server
-systemctl status next-server
 echo "Next-Server 服务已启动并设置开机自启"
+echo "查看状态: systemctl status next-server"
+echo "======================================"
