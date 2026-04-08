@@ -95,19 +95,33 @@ if [[ -n "$input" ]]; then
     yq -i ".Nodes[0].ControllerConfig.CertConfig.CertMode = \"$input\"" "$CONFIG_FILE"
 fi
 
-if [[ "$input" != "none" ]]; then
-    # 申请证书（certbot）
+# 询问用户是否申请 TLS 证书
+read -p "是否需要自动申请 TLS 证书？(y/n) [n]: " cert_confirm
+cert_confirm=${cert_confirm:-n}  # 默认 n
+
+if [[ "$cert_confirm" == "y" || "$cert_confirm" == "Y" ]]; then
+    # 设置 CertMode 为 file
+    yq -i ".Nodes[0].ControllerConfig.CertConfig.CertMode = \"file\"" "$CONFIG_FILE"
+
+    # 提示输入域名
     cert_domain=$(read_input "请输入 CertDomain" "$(yq '.Nodes[0].ControllerConfig.CertConfig.CertDomain // ""' "$CONFIG_FILE")")
     if [[ -n "$cert_domain" ]]; then
+        # 执行 certbot 申请证书
         certbot certonly --standalone -d "$cert_domain" --agree-tos -m your_email@example.com --non-interactive
+
         cert_file="/etc/letsencrypt/live/$cert_domain/fullchain.pem"
         key_file="/etc/letsencrypt/live/$cert_domain/privkey.pem"
+
+        # 写入 YAML
         yq -i ".Nodes[0].ControllerConfig.CertConfig.CertFile = \"$cert_file\"" "$CONFIG_FILE"
         yq -i ".Nodes[0].ControllerConfig.CertConfig.KeyFile = \"$key_file\"" "$CONFIG_FILE"
 
         # 添加 crontab 续期，每 2 个月一次，不重启 next-server
         (crontab -l 2>/dev/null; echo "0 0 1 */2 * certbot renew --quiet") | crontab -
+        echo "证书申请完成，续期已加入 crontab"
     fi
+else
+    echo "跳过 TLS 证书申请"
 fi
 
 echo "配置已更新: $CONFIG_FILE"
