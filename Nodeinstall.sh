@@ -2,58 +2,53 @@
 
 set -e
 
-# =========================
+CONFIG_FILE="/root/next-server-linux-amd64/config.yml"
+INSTALL_DIR="/root/next-server-linux-amd64"
+
 # 安装依赖
-# =========================
-apt update && apt install -y ca-certificates wget curl unzip tar git certbot
+apt update && apt install -y ca-certificates wget curl unzip tar supervisor git certbot yq
 
-# 安装 yq
-if ! command -v yq &>/dev/null; then
-    wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-    chmod +x /usr/local/bin/yq
-fi
+# 克隆 ServerStatus（可选）
+git clone https://github.com/mmfdsfsd/ServerStatus.git || true
 
-# =========================
-# 下载程序
-# =========================
-mkdir -p /root/next-server-linux-amd64
-cd /root/next-server-linux-amd64 || exit 1
+# 创建目录
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 
-CPU_VENDOR=$(awk -F: '/vendor_id/ {gsub(/ /,"",$2); print tolower($2); exit}' /proc/cpuinfo)
+# 检测 CPU 厂商
+CPU_VENDOR=$(grep -m1 'vendor_id' /proc/cpuinfo | awk '{print $3}' | tr '[:upper:]' '[:lower:]')
 echo "检测到 CPU 厂商: $CPU_VENDOR"
 
-if [[ "$CPU_VENDOR" == *"intel"* ]]; then
+# 下载对应压缩包
+if [[ "$CPU_VENDOR" == "genuineintel" ]]; then
     ZIP_URL="https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.19/next-server-linux-amd64.zip"
-elif [[ "$CPU_VENDOR" == *"amd"* ]]; then
+elif [[ "$CPU_VENDOR" == "authenticamd" ]]; then
     ZIP_URL="https://github.com/mmfdsfsd/NeXT-Server/releases/download/0.3.19/next-server-linux-amd64v3.zip"
 else
-    echo "无法识别 CPU，默认 Intel"
-    ZIP_URL="https://github.com/The-NeXT-Project/NeXT-Server/releases/download/v0.3.19/next-server-linux-amd64.zip"
+    echo "无法识别 CPU 厂商，请手动选择下载包"
+    exit 1
 fi
 
-wget -q -O next-server.zip "$ZIP_URL"
-unzip -o next-server.zip
-rm -f next-server.zip
+wget -q -N --no-check-certificate "$ZIP_URL"
+unzip -o $(basename $ZIP_URL)
+rm -f $(basename $ZIP_URL)
 
-wget -q -O geosite.dat https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
+# 下载 geosite.dat
+rm -f geosite.dat
+wget -q -N --no-check-certificate -c https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat -O geosite.dat
 
 chmod +x next-server
 
-CONFIG_FILE="/root/next-server-linux-amd64/config.yml"
-
-# =========================
-# 交互函数
-# =========================
+# 交互输入函数：用户回车 → 保留原注释
 read_input() {
     local prompt="$1"
-    local default="$2"
-    read -p "$prompt [$default]: " input
-    echo "${input:-$default}"
+    local current_value="$2"
+    local input
+    read -p "$prompt [$current_value]: " input
+    echo "$input"
 }
 
-# =========================
-# 读取配置
-# =========================
+# 读取原值（如果字段不存在返回空字符串）
 route=$(yq '.RouteConfigPath // ""' "$CONFIG_FILE")
 outbound=$(yq '.OutboundConfigPath // ""' "$CONFIG_FILE")
 api_host=$(yq '.Nodes[0].ApiConfig.ApiHost // ""' "$CONFIG_FILE")
@@ -64,114 +59,82 @@ cert_mode=$(yq '.Nodes[0].ControllerConfig.CertConfig.CertMode // "none"' "$CONF
 cert_file=$(yq '.Nodes[0].ControllerConfig.CertConfig.CertFile // ""' "$CONFIG_FILE")
 key_file=$(yq '.Nodes[0].ControllerConfig.CertConfig.KeyFile // ""' "$CONFIG_FILE")
 
-# =========================
-# 用户输入
-# =========================
-route=$(read_input "RouteConfigPath" "$route")
-outbound=$(read_input "OutboundConfigPath" "$outbound")
-
-api_host=$(read_input "ApiHost(不要输入 https://)" "$api_host")
-# 自动补 https
-if [[ ! "$api_host" =~ ^https?:// ]]; then
-    api_host="https://$api_host"
+# 提示用户输入，用户回车 → 保留原注释/空值
+input=$(read_input "RouteConfigPath" "$route")
+if [[ -n "$input" ]]; then
+    yq -i ".RouteConfigPath = \"$input\"" "$CONFIG_FILE"
 fi
 
-api_key=$(read_input "ApiKey" "$api_key")
-node_id=$(read_input "NodeID" "$node_id")
-node_type=$(read_input "NodeType(vmess/trojan/shadowsocks)" "$node_type")
+input=$(read_input "OutboundConfigPath" "$outbound")
+if [[ -n "$input" ]]; then
+    yq -i ".OutboundConfigPath = \"$input\"" "$CONFIG_FILE"
+fi
 
-# =========================
-# TLS 申请
-# =========================
-read -p "是否自动申请 TLS 证书? (y/n) [n]: " enable_tls
-enable_tls=${enable_tls:-n}
+input=$(read_input "ApiHost (不要输入 https://)" "$api_host")
+if [[ -n "$input" ]]; then
+    yq -i ".Nodes[0].ApiConfig.ApiHost = \"https://$input\"" "$CONFIG_FILE"
+fi
 
-if [[ "$enable_tls" == "y" || "$enable_tls" == "Y" ]]; then
-    read -p "请输入域名: " cert_domain
-    read -p "请输入邮箱: " cert_email
+input=$(read_input "ApiKey" "$api_key")
+if [[ -n "$input" ]]; then
+    yq -i ".Nodes[0].ApiConfig.ApiKey = \"$input\"" "$CONFIG_FILE"
+fi
 
-    systemctl stop nginx 2>/dev/null || true
-    systemctl stop apache2 2>/dev/null || true
+input=$(read_input "NodeID" "$node_id")
+if [[ -n "$input" ]]; then
+    yq -i ".Nodes[0].ApiConfig.NodeID = $input" "$CONFIG_FILE"
+fi
 
-    certbot certonly --standalone \
-        -d "$cert_domain" \
-        --non-interactive \
-        --agree-tos \
-        -m "$cert_email"
+input=$(read_input "NodeType (vmess/trojan/shadowsocks/shadowsocks2022)" "$node_type")
+if [[ -n "$input" ]]; then
+    yq -i ".Nodes[0].ApiConfig.NodeType = \"$input\"" "$CONFIG_FILE"
+fi
 
-    CERT_PATH="/etc/letsencrypt/live/$cert_domain/fullchain.pem"
-    KEY_PATH="/etc/letsencrypt/live/$cert_domain/privkey.pem"
+input=$(read_input "CertMode (none/file/http/tls/dns)" "$cert_mode")
+if [[ -n "$input" ]]; then
+    yq -i ".Nodes[0].ControllerConfig.CertConfig.CertMode = \"$input\"" "$CONFIG_FILE"
+fi
 
-    if [[ -f "$CERT_PATH" && -f "$KEY_PATH" ]]; then
-        echo "证书申请成功"
-        cert_mode="file"
-        cert_file="$CERT_PATH"
-        key_file="$KEY_PATH"
+if [[ "$input" != "none" ]]; then
+    # 申请证书（certbot）
+    cert_domain=$(read_input "请输入 CertDomain" "$(yq '.Nodes[0].ControllerConfig.CertConfig.CertDomain // ""' "$CONFIG_FILE")")
+    if [[ -n "$cert_domain" ]]; then
+        certbot certonly --standalone -d "$cert_domain" --agree-tos -m your_email@example.com --non-interactive
+        cert_file="/etc/letsencrypt/live/$cert_domain/fullchain.pem"
+        key_file="/etc/letsencrypt/live/$cert_domain/privkey.pem"
+        yq -i ".Nodes[0].ControllerConfig.CertConfig.CertFile = \"$cert_file\"" "$CONFIG_FILE"
+        yq -i ".Nodes[0].ControllerConfig.CertConfig.KeyFile = \"$key_file\"" "$CONFIG_FILE"
 
-        # =========================
-        # 仅成功才设置续期
-        # =========================
-        cat <<'EOF' > /usr/local/bin/cert_renew.sh
-#!/bin/bash
-systemctl stop nginx 2>/dev/null
-systemctl stop apache2 2>/dev/null
-certbot renew --quiet
-EOF
-
-        chmod +x /usr/local/bin/cert_renew.sh
-
-        (crontab -l 2>/dev/null | grep -v cert_renew.sh; echo "0 3 1 */2 * /usr/local/bin/cert_renew.sh") | crontab -
-
-        echo "已设置证书自动续期"
-    else
-        echo "证书申请失败，跳过续期"
+        # 添加 crontab 续期，每 2 个月一次，不重启 next-server
+        (crontab -l 2>/dev/null; echo "0 0 1 */2 * certbot renew --quiet") | crontab -
     fi
 fi
 
-# =========================
-# 写入 config.yml
-# =========================
-yq -i "
-.RouteConfigPath = \"$route\" |
-.OutboundConfigPath = \"$outbound\" |
-.Nodes[0].ApiConfig.ApiHost = \"$api_host\" |
-.Nodes[0].ApiConfig.ApiKey = \"$api_key\" |
-.Nodes[0].ApiConfig.NodeID = $node_id |
-.Nodes[0].ApiConfig.NodeType = \"$node_type\" |
-.Nodes[0].ControllerConfig.CertConfig.CertMode = \"$cert_mode\" |
-.Nodes[0].ControllerConfig.CertConfig.CertFile = \"$cert_file\" |
-.Nodes[0].ControllerConfig.CertConfig.KeyFile = \"$key_file\"
-" "$CONFIG_FILE"
+echo "配置已更新: $CONFIG_FILE"
 
-echo "config.yml 已更新"
+# 创建 systemd 服务
+SERVICE_FILE="/etc/systemd/system/next-server.service"
 
-# =========================
-# systemd 服务
-# =========================
-cat <<EOF > /etc/systemd/system/next-server.service
+cat > $SERVICE_FILE <<EOF
 [Unit]
-Description=NeXT Server
+Description=Next-Server Service
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/root/next-server-linux-amd64
-ExecStart=/root/next-server-linux-amd64/next-server -c /root/next-server-linux-amd64/config.yml
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$INSTALL_DIR/next-server -c $CONFIG_FILE
 Restart=always
 RestartSec=5
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# 重新加载 systemd
 systemctl daemon-reload
 systemctl enable next-server
-systemctl restart next-server
-
-# =========================
-# 完成
-# =========================
-echo "======================================"
-echo "部署完成！"
-echo "查看状态: systemctl status next-server"
-echo "======================================"
+systemctl start next-server
+systemctl status next-server
+echo "Next-Server 服务已启动并设置开机自启"
