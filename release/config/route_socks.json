@@ -15,6 +15,12 @@
         "bittorrent"
       ]
     },
+	{
+      "type": "field",
+      "outboundTag": "block",
+      "network": "udp",
+      "port": "443"
+    },
     {
       "type": "field",
       "outboundTag": "IPv4_out",
@@ -32,7 +38,7 @@
       "ip": [
         "1.1.1.1"
       ]
-    },
+    },  
     {
       "type": "field",
       "outboundTag": "IPv4_out",
@@ -43,7 +49,10 @@
 	{
       "type": "field",
       "outboundTag": "Ai_Socks5_out",
-      "domain": ["geosite:category-ai-!cn"]
+      "domain": [
+		  "geosite:category-ai-!cn",
+		  "geosite:google-gemini"
+	  ]
     },
     {
       "type": "field",
