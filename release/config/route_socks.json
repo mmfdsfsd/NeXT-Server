@@ -21,6 +21,14 @@
       "network": "udp",
       "port": "443"
     },
+	{
+      "type": "field",
+      "outboundTag": "Ai_Socks5_out",
+      "ip": [
+        "geoip:jp",
+		"geoip:google"
+      ]
+    },  
     {
       "type": "field",
       "outboundTag": "IPv4_out",
