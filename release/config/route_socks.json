@@ -56,6 +56,14 @@
     },
 	{
       "type": "field",
+      "outboundTag": "IPv4_out",
+      "domain": [
+		  "geosite:category-ru",
+		  "geosite:category-ip-geo-detect"
+	  ]
+    },
+	{
+      "type": "field",
       "outboundTag": "Ai_Socks5_out",
       "domain": [
 		  "geosite:category-ai-!cn",
