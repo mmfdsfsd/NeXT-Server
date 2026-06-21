@@ -57,6 +57,13 @@
 	{
       "type": "field",
       "outboundTag": "IPv4_out",
+      "ip": [
+        "geoip:ru"
+      ]
+    },
+	{
+      "type": "field",
+      "outboundTag": "IPv4_out",
       "domain": [
 		  "geosite:category-ru",
 		  "geosite:category-ip-geo-detect"
