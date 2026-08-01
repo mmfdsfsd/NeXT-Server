@@ -85,7 +85,7 @@
     {
       "type": "field",
       "outboundTag": "IPv4_out",
-      "network": "udp"
+      "network": "tcp,udp"
     }
   ]
 }
